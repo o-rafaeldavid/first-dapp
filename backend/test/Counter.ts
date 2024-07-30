@@ -12,6 +12,7 @@ describe('Counter', () => {
     // initialize variables before each test
     beforeEach(async () => {
         owner = (await ethers.getSigners())[0]
+        //load Counter contract and deploy it
         const Counter = await ethers.getContractFactory('Counter')
         counter = await Counter.deploy('My Counter', 1)
 
