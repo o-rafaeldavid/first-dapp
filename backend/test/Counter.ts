@@ -12,10 +12,10 @@ describe('Counter', () => {
     // initialize variables before each test
     beforeEach(async () => {
         owner = (await ethers.getSigners())[0]
-        //load Counter contract and deploy it
+        // load Counter contract and deploy it
         const Counter = await ethers.getContractFactory('Counter')
         counter = await Counter.deploy('My Counter', 1)
-
+        // get the timestamp before the tests (and after all initializations)
         const blockNumBefore = await ethers.provider.getBlockNumber()
         const blockBefore = await ethers.provider.getBlock(blockNumBefore)
         timestampBefore = blockBefore!.timestamp
@@ -23,11 +23,11 @@ describe('Counter', () => {
 
     // initialize the contract test
     describe('Initialization and getters', () => {
-        it('Should set the initial count', async () => {
+        it('Should get the initial count', async () => {
             expect(await counter.getCount()).to.equal(1)
         })
 
-        it('Should set the initial name', async () => {
+        it('Should get the initial name', async () => {
             expect(await counter.getName()).to.equal('My Counter')
         })
     })
