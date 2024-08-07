@@ -2,13 +2,14 @@ import { expect } from 'chai'
 import { ethers } from 'hardhat'
 import type { RealEstate } from '../typechain-types'
 import type { Escrow } from '../typechain-types'
-import type { ContractTransactionResponse } from 'ethers'
+import type { ContractTransactionResponse, TransactionReceipt } from 'ethers'
 import type { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/signers'
 
 const ether = (n: number) => ethers.parseEther(n.toString())
 
 describe('RealEstate', () => {
     let transaction: ContractTransactionResponse
+    let receipt: TransactionReceipt | null
     let timestampBefore: number
     //
     let owner: HardhatEthersSigner
@@ -24,7 +25,7 @@ describe('RealEstate', () => {
     let escrow: Escrow & { deploymentTransaction(): ContractTransactionResponse } //escrow: deployed Escrow.sol contract
     //
     let NFT: { id: number; address: string } = {
-        id: 1,
+        id: -1,
         address: '',
     }
 
@@ -35,9 +36,27 @@ describe('RealEstate', () => {
         const RealEstate = await ethers.getContractFactory('RealEstate')
         const Escrow = await ethers.getContractFactory('Escrow')
 
-        // deploying Contracts
+        // Deploying Contracts
+        // RealEstate NFT
         realEstate = await RealEstate.deploy(owner.address)
+        transaction = await realEstate.safeMint(
+            seller.address,
+            'https://ipfs.io/ipfs/QmQVcpsjrA6cr1iJjZAodYwmPekYgbnXGo4DFubJiLc2EB/1.json',
+        )
+        receipt = await transaction.wait()
+        if (receipt === null) throw new Error('NFT Mint TX failed!')
+
+        // get Transfer event Log
+        const transferEventParsedLog = realEstate.interface.parseLog(
+            receipt.logs.find((log) => realEstate.interface.parseLog(log)?.name === 'Transfer')!,
+        )
+
+        if (transferEventParsedLog) NFT.id = Number(transferEventParsedLog.args.tokenId)
+        else throw new Error('Transfer event not found')
+
         NFT.address = await realEstate.getAddress()
+
+        // Escrow
         escrow = await Escrow.deploy(
             NFT.address,
             NFT.id,
