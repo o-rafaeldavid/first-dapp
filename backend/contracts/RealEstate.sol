@@ -5,9 +5,18 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract RealEstate is ERC721, ERC721Enumerable, ERC721URIStorage {
-    constructor() ERC721("Real Estate", "RE") {}
+contract RealEstate is ERC721, ERC721Enumerable, ERC721URIStorage, Ownable {
+    uint256 private _nextTokenId;
+
+    constructor(address initialOwner) ERC721("RealEstate", "RE") Ownable(initialOwner) {}
+
+    function safeMint(address to, string memory uri) public onlyOwner {
+        uint256 tokenId = _nextTokenId++;
+        _safeMint(to, tokenId);
+        _setTokenURI(tokenId, uri);
+    }
 
     // The following functions are overrides required by Solidity.
 

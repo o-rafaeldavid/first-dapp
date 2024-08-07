@@ -11,7 +11,7 @@ describe('RealEstate', () => {
     let transaction: ContractTransactionResponse
     let timestampBefore: number
     //
-    let accounts: HardhatEthersSigner[]
+    let owner: HardhatEthersSigner
     let seller: HardhatEthersSigner
     let buyer: HardhatEthersSigner
     let inspector: HardhatEthersSigner
@@ -30,17 +30,13 @@ describe('RealEstate', () => {
 
     // initialize variables before each test
     beforeEach(async () => {
-        accounts = await ethers.getSigners()
-        seller = accounts[0]
-        buyer = accounts[1]
-        inspector = accounts[2]
-        lender = accounts[3]
+        ;[owner, seller, buyer, inspector, lender] = await ethers.getSigners()
         // loading Contracts
         const RealEstate = await ethers.getContractFactory('RealEstate')
         const Escrow = await ethers.getContractFactory('Escrow')
 
         // deploying Contracts
-        realEstate = await RealEstate.deploy()
+        realEstate = await RealEstate.deploy(owner.address)
         NFT.address = await realEstate.getAddress()
         escrow = await Escrow.deploy(
             NFT.address,
