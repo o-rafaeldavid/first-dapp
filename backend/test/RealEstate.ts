@@ -140,7 +140,7 @@ describe('RealEstate', () => {
             //checks balance after the transaction
             balance = await ethers.provider.getBalance(seller.address)
             console.log('Seller Balance: ', ethers.formatEther(balance))
-            expect(await realEstate.ownerOf(NFT.id)).to.above(10099)
+            expect(balance).to.above(10099)
         })
     })
 })
