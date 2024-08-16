@@ -19,8 +19,8 @@ contract Escrow {
 
     mapping(uint256 => address) public seller;
     mapping(uint256 => address) public buyer;
-    mapping(uint256 => address) public lender;
     mapping(uint256 => address) public inspector;
+    mapping(uint256 => address) public lender;
 
     mapping(uint256 => bool) public withEscrow; // check if the NFT is listed with escrow value
 
@@ -41,6 +41,13 @@ contract Escrow {
     modifier mustBeWithEscrow(uint256 _nftID) {
         if (!withEscrow[_nftID]) {
             revert WithoutEscrowError(_nftID, "NFT is not with escrow value (buyer must deposit to do a escrow)");
+        }
+        _;
+    }
+
+    modifier mustBeInspectionPassed(uint256 _nftID) {
+        if (!inspectionPassed[_nftID]) {
+            revert InspectionPassedError(_nftID, "Inspection not passed yet");
         }
         _;
     }
@@ -79,6 +86,7 @@ contract Escrow {
     error EarnestDepositError(string reason, uint256 _nftID, uint256 escrowAmount, uint256 providedAmount);
     error NotListedError(uint256 _nftID, string reason);
     error WithoutEscrowError(uint256 _nftID, string reason);
+    error InspectionPassedError(uint256 _nftID, string reason);
     error SaleError(uint256 _nftID, string reason);
 
     ////////////////////////////////////////
@@ -160,22 +168,6 @@ contract Escrow {
     }
 
     ////////
-    // LENDER things
-
-    function meToLend(uint256 _nftID) public mustBeListed(_nftID) {
-        if (lender[_nftID] != address(0)) {
-            revert NotDesiredEntityError("NFT already has a lender", _nftID, lender[_nftID], msg.sender);
-        }
-        lender[_nftID] = msg.sender;
-    }
-
-    function lend(
-        uint256 _nftID
-    ) public payable mustBeListed(_nftID) mustBeWithEscrow(_nftID) onlyLender(_nftID, "Only lender can lend") {
-        depositByLender[_nftID] += msg.value;
-    }
-
-    ////////
     // INSPECTOR things
 
     // inspector is assigned to the NFT
@@ -193,6 +185,36 @@ contract Escrow {
     ) public mustBeListed(_nftID) onlyInspector(_nftID, "Only inspector can update inspection status") {
         inspectionPassed[_nftID] = _inspectionPassed;
         emit InspectionEvent(block.timestamp, _nftID, inspector[_nftID], _inspectionPassed);
+    }
+
+    ////////
+    // LENDER things
+
+    /**
+     * to be a lender on a sell the NFT must be listed and:
+     *** 1. the NFT must not have a lender yet
+     *** 2. the NFT must have a buyer
+     *** 3. the NFT must have passed the inspection
+     */
+
+    function meToLend(uint256 _nftID) public mustBeListed(_nftID) mustBeInspectionPassed(_nftID) {
+        if (lender[_nftID] != address(0)) {
+            revert NotDesiredEntityError("NFT already has a lender", _nftID, lender[_nftID], msg.sender);
+        }
+        lender[_nftID] = msg.sender;
+    }
+
+    function lend(
+        uint256 _nftID
+    )
+        public
+        payable
+        mustBeListed(_nftID)
+        mustBeWithEscrow(_nftID)
+        mustBeInspectionPassed(_nftID)
+        onlyLender(_nftID, "Only lender can lend")
+    {
+        depositByLender[_nftID] += msg.value;
     }
 
     ////////
