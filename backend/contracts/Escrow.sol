@@ -19,8 +19,8 @@ contract Escrow {
 
     mapping(uint256 => address) public seller;
     mapping(uint256 => address) public buyer;
-    mapping(uint256 => address) public inspector;
     mapping(uint256 => address) public lender;
+    mapping(uint256 => address) public inspector;
 
     mapping(uint256 => bool) public withEscrow; // check if the NFT is listed with escrow value
 
@@ -55,6 +55,13 @@ contract Escrow {
     modifier onlyBuyer(uint256 _nftID, string memory reason) {
         if (msg.sender != buyer[_nftID]) {
             revert NotDesiredEntityError(reason, _nftID, buyer[_nftID], msg.sender);
+        }
+        _;
+    }
+
+    modifier onlyLender(uint256 _nftID, string memory reason) {
+        if (msg.sender != lender[_nftID]) {
+            revert NotDesiredEntityError(reason, _nftID, lender[_nftID], msg.sender);
         }
         _;
     }
@@ -131,8 +138,8 @@ contract Escrow {
         buyer[_nftID] = msg.sender;
     }
 
-    // buyer deposits the earnest to the escrow
-    function depositEarnest(
+    // buyer deposits for the NFT (must deposit an earnest)
+    function deposit(
         uint256 _nftID
     ) public payable mustBeListed(_nftID) onlyBuyer(_nftID, "Only buyer can deposit earnest") {
         /**
@@ -154,6 +161,19 @@ contract Escrow {
 
     ////////
     // LENDER things
+
+    function meToLend(uint256 _nftID) public mustBeListed(_nftID) {
+        if (lender[_nftID] != address(0)) {
+            revert NotDesiredEntityError("NFT already has a lender", _nftID, lender[_nftID], msg.sender);
+        }
+        lender[_nftID] = msg.sender;
+    }
+
+    function lend(
+        uint256 _nftID
+    ) public payable mustBeListed(_nftID) mustBeWithEscrow(_nftID) onlyLender(_nftID, "Only lender can lend") {
+        depositByLender[_nftID] += msg.value;
+    }
 
     ////////
     // INSPECTOR things
