@@ -13,14 +13,19 @@ contract Escrow {
     mapping(uint256 => bool) public isListed; // check if the NFT is listed
     mapping(uint256 => uint256) public purchasePrice; // value of the NFT Property
     mapping(uint256 => uint256) public escrowAmount; // value of the escrow (buyer must deposit to do a escrow)
+    mapping(uint256 => uint256) public depositedAmount; // value of the escrow (buyer must deposit to do a escrow)
+    mapping(uint256 => uint256) public depositByBuyer; // money given by buyer
+    mapping(uint256 => uint256) public depositByLender; // money given by lender
 
     mapping(uint256 => address) public seller;
     mapping(uint256 => address) public buyer;
     mapping(uint256 => address) public inspector;
     mapping(uint256 => address) public lender;
 
-    mapping(uint256 => bool) public inspectionPassed;
-    mapping(address => bool) public approval;
+    mapping(uint256 => bool) public withEscrow; // check if the NFT is listed with escrow value
+
+    mapping(uint256 => bool) public inspectionPassed; // check if the inspection passed
+    mapping(address => bool) public approval; // check if the party approved the sale
 
     receive() external payable {}
 
@@ -29,6 +34,13 @@ contract Escrow {
     modifier mustBeListed(uint256 _nftID) {
         if (!isListed[_nftID]) {
             revert NotListedError(_nftID, "NFT is not listed");
+        }
+        _;
+    }
+
+    modifier mustBeWithEscrow(uint256 _nftID) {
+        if (!withEscrow[_nftID]) {
+            revert WithoutEscrowError(_nftID, "NFT is not with escrow value (buyer must deposit to do a escrow)");
         }
         _;
     }
@@ -59,6 +71,7 @@ contract Escrow {
     error NotDesiredEntityError(string reason, uint256 _nftID, address desiredEntity, address providedEntity);
     error EarnestDepositError(string reason, uint256 _nftID, uint256 escrowAmount, uint256 providedAmount);
     error NotListedError(uint256 _nftID, string reason);
+    error WithoutEscrowError(uint256 _nftID, string reason);
     error SaleError(uint256 _nftID, string reason);
 
     ////////////////////////////////////////
@@ -122,11 +135,25 @@ contract Escrow {
     function depositEarnest(
         uint256 _nftID
     ) public payable mustBeListed(_nftID) onlyBuyer(_nftID, "Only buyer can deposit earnest") {
-        if (msg.value < escrowAmount[_nftID]) {
-            revert EarnestDepositError("Insuficient funds provided", _nftID, escrowAmount[_nftID], msg.value);
+        /**
+         * if the buyer (interested) is depositing for the first time
+         *** then must deposit the escrow amount
+         *
+         * if the buyer (interested) is depositing more after the first time, then can deposit any amount
+         */
+        if (depositedAmount[_nftID] < escrowAmount[_nftID]) {
+            if (msg.value < escrowAmount[_nftID])
+                revert EarnestDepositError("Insuficient funds provided", _nftID, escrowAmount[_nftID], msg.value);
+
+            withEscrow[_nftID] = true;
         }
+        depositedAmount[_nftID] += msg.value;
+        depositByBuyer[_nftID] += msg.value;
         emit DepositedEarnestEvent(block.timestamp, _nftID, msg.sender, msg.value);
     }
+
+    ////////
+    // LENDER things
 
     ////////
     // INSPECTOR things
