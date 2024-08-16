@@ -93,7 +93,7 @@ contract Escrow {
     // Events
     event InspectionEvent(uint256 when, uint256 indexed nftID, address indexed inspector, bool passed);
 
-    event DepositedEarnestEvent(uint256 when, uint256 indexed nftID, address indexed buyer, uint256 amount);
+    event DepositedByBuyerEvent(uint256 when, uint256 indexed nftID, address indexed buyer, uint256 amount);
 
     event ApprovedSaleByEvent(uint256 when, uint256 indexed nftID, address indexed approver);
 
@@ -147,7 +147,7 @@ contract Escrow {
     }
 
     // buyer deposits for the NFT (must deposit an earnest)
-    function deposit(
+    function depositBuyer(
         uint256 _nftID
     ) public payable mustBeListed(_nftID) onlyBuyer(_nftID, "Only buyer can deposit earnest") {
         /**
@@ -164,7 +164,7 @@ contract Escrow {
         }
         depositedAmount[_nftID] += msg.value;
         depositByBuyer[_nftID] += msg.value;
-        emit DepositedEarnestEvent(block.timestamp, _nftID, msg.sender, msg.value);
+        emit DepositedByBuyerEvent(block.timestamp, _nftID, msg.sender, msg.value);
     }
 
     ////////
@@ -197,7 +197,7 @@ contract Escrow {
      *** 3. the NFT must have passed the inspection
      */
 
-    function meToLend(uint256 _nftID) public mustBeListed(_nftID) mustBeInspectionPassed(_nftID) {
+    function meToLender(uint256 _nftID) public mustBeListed(_nftID) mustBeInspectionPassed(_nftID) {
         if (lender[_nftID] != address(0)) {
             revert NotDesiredEntityError("NFT already has a lender", _nftID, lender[_nftID], msg.sender);
         }
@@ -214,6 +214,7 @@ contract Escrow {
         mustBeInspectionPassed(_nftID)
         onlyLender(_nftID, "Only lender can lend")
     {
+        depositedAmount[_nftID] += msg.value;
         depositByLender[_nftID] += msg.value;
     }
 
