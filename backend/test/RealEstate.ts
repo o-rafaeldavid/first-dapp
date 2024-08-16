@@ -60,8 +60,6 @@ describe('RealEstate', () => {
         escrow = await Escrow.deploy(
             NFT.address,
             NFT.id,
-            purchasePrice,
-            escrowAmount,
             seller.address,
             buyer.address,
             inspector.address,
@@ -84,21 +82,58 @@ describe('RealEstate', () => {
         })
     })
 
+    /* describe('Listing', async () => {
+        it('Update the ownership', async () => {
+            expect(await realEstate.ownerOf(NFT.id)).to.equal(await escrow.getAddress())
+        })
+    }) */
+
     describe('Selling Real Estate', async () => {
         it('Should execute a successful transaction', async () => {
             let transactionCounter = 0
+            //checks balance before the transaction
+            let balance = await ethers.provider.getBalance(seller.address)
+            console.log('       💰 Seller Balance: ', ethers.formatEther(balance))
             // Expects the seller to be the NFT owner before the sell (transaction)
             expect(await realEstate.ownerOf(NFT.id)).to.equal(seller.address)
+            console.log('       ✅ Seller is the NFT owner')
+
+            // Expects the seller to list the NFT for sale
+            transaction = await realEstate.connect(seller).approve(await escrow.getAddress(), NFT.id)
+            await transaction.wait()
+            transactionCounter++
+
+            transaction = await escrow.connect(seller).list(NFT.id, purchasePrice, escrowAmount)
+            await transaction.wait()
+            transactionCounter++
+
+            expect(await realEstate.ownerOf(NFT.id)).to.equal(await escrow.getAddress())
+            expect(transaction)
+                .to.emit(escrow, 'ListEvent')
+                .withArgs(
+                    timestampBefore + transactionCounter,
+                    NFT.address,
+                    NFT.id,
+                    seller,
+                    buyer,
+                    purchasePrice,
+                    escrowAmount,
+                )
+
+            const result = await escrow.isListed(NFT.id)
+            expect(result).to.equal(true)
+
+            console.log('       ✅ Seller listed NFT to the Escrow contract')
 
             // Buyer deposits earnest (escrow amount)
             transaction = await escrow.connect(buyer).depositEarnest({ value: escrowAmount })
             await transaction.wait()
             transactionCounter++
-            console.log('Buyer deposited earnest')
+            console.log('       ✅ Buyer deposited earnest')
 
             // Just to check the escrow balance
-            let balance = await escrow.getBalance()
-            console.log('Escrow Balance: ', ethers.formatEther(balance))
+            balance = await escrow.getBalance()
+            console.log('       💰 Escrow Balance: ', ethers.formatEther(balance))
 
             // Inspector updates the status of the inspection
             transaction = await escrow.connect(inspector).updateInspectionStatus(true)
@@ -107,7 +142,7 @@ describe('RealEstate', () => {
             await expect(transaction)
                 .to.emit(escrow, 'InspectionEvent')
                 .withArgs(timestampBefore + transactionCounter, NFT.address, NFT.id, inspector, true)
-            console.log('Inspection set to true')
+            console.log('       ✅ Inspection set to true')
 
             // Lender sends the loan amount to the escrow
             await lender.sendTransaction({ to: await escrow.getAddress(), value: purchasePrice - escrowAmount })
@@ -122,7 +157,7 @@ describe('RealEstate', () => {
                 await expect(transaction)
                     .to.emit(escrow, 'ApprovedSaleByEvent')
                     .withArgs(timestampBefore + transactionCounter, NFT.address, NFT.id, approval)
-                console.log('Approved Sale by: ', approval.address)
+                console.log('       ✅ Approved Sale by: ', approval.address)
             }
 
             // Expects the sell to be successful
@@ -132,14 +167,14 @@ describe('RealEstate', () => {
             await expect(transaction)
                 .to.emit(escrow, 'SaleEvent')
                 .withArgs(timestampBefore + transactionCounter, NFT.address, NFT.id, seller, buyer)
-            console.log('Transaction done successfully')
+            console.log('       🤑 Transaction done successfully')
 
             // Expects the buyer to be the NFT owner after the sell
             expect(await realEstate.ownerOf(NFT.id)).to.equal(buyer.address)
 
             //checks balance after the transaction
             balance = await ethers.provider.getBalance(seller.address)
-            console.log('Seller Balance: ', ethers.formatEther(balance))
+            console.log('       💰 Seller Balance: ', ethers.formatEther(balance))
             expect(balance).to.above(10099)
         })
     })

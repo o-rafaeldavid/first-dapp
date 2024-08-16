@@ -7,30 +7,47 @@ import "./RealEstate.sol";
 contract Escrow {
     ////////////////////////////////////////
     // Vars
-    address public nftAddress;
-    uint256 public nftID;
-    uint256 public purchasePrice; // value of the NFT Property
-    uint256 public escrowAmount; // value of the escrow (buyer must deposit to do a escrow)
-    address payable public seller;
-    address payable public buyer;
-    address public inspector; // addr of the inspector (who inspects the property)
-    address public lender; // addr of the lender (who gives money to the buyer (loan))
+    address public realEstateNFTAddress;
 
-    bool public inspectionPassed = false;
+    // (nftID => info of the NFT Property listed)
+    mapping(uint256 => bool) public isListed; // check if the NFT is listed
+    mapping(uint256 => uint256) public purchasePrice; // value of the NFT Property
+    mapping(uint256 => uint256) public escrowAmount; // value of the escrow (buyer must deposit to do a escrow)
+
+    mapping(uint256 => address) public seller;
+    mapping(uint256 => address) public buyer;
+    mapping(uint256 => address) public inspector;
+    mapping(uint256 => address) public lender;
+
+    mapping(uint256 => bool) public inspectionPassed;
     mapping(address => bool) public approval;
 
     receive() external payable {}
 
     ////////////////////////////////////////
     // Modifiers
-    modifier onlyBuyer(string memory reason) {
-        if (msg.sender != buyer) {
+    modifier mustBeListed(uint256 _nftID) {
+        if (!isListed[_nftID]) {
+            revert NotListedError("NFT is not listed");
+        }
+        _;
+    }
+
+    modifier onlySeller(string memory reason) {
+        if (msg.sender != seller) {
             revert NotDesiredEntityError(reason, buyer, msg.sender);
         }
         _;
     }
 
-    modifier onlyInspector(string memory reason) {
+    modifier onlyBuyer(uint256 _nftID, string memory reason) {
+        if (msg.sender != buyer[_nftID]) {
+            revert NotDesiredEntityError(reason, buyer[_nftID], msg.sender);
+        }
+        _;
+    }
+
+    modifier onlyInspector(uint256 _nftID, string memory reason) {
         if (msg.sender != inspector) {
             revert NotDesiredEntityError(reason, inspector, msg.sender);
         }
@@ -39,15 +56,15 @@ contract Escrow {
 
     ////////////////////////////////////////
     // Errors
-    error NotDesiredEntityError(string reason, address desiredEntity, address providedEntity);
-    error EarnestDepositError(string reason, uint256 escrowAmount, uint256 providedAmount);
-    error SaleError(string reason);
+    error NotDesiredEntityError(string reason, uint256 _nftID, address desiredEntity, address providedEntity);
+    error EarnestDepositError(string reason, uint256 _nftID, uint256 escrowAmount, uint256 providedAmount);
+    error NotListedError(uint256 _nftID, string reason);
+    error SaleError(uint256 _nftID, string reason);
 
     ////////////////////////////////////////
     // Events
     event InspectionEvent(
         uint256 when,
-        address indexed nftAddress,
         uint256 indexed nftID,
         address indexed inspector,
         bool passed
@@ -55,7 +72,6 @@ contract Escrow {
 
     event DepositedEarnestEvent(
         uint256 when,
-        address indexed nftAddress,
         uint256 indexed nftID,
         address indexed buyer,
         uint256 amount
@@ -63,78 +79,110 @@ contract Escrow {
 
     event ApprovedSaleByEvent(
         uint256 when,
-        address indexed nftAddress,
         uint256 indexed nftID,
         address indexed approver
     );
 
     event SaleEvent(
         uint256 when,
-        address indexed nftAddress,
         uint256 indexed nftID,
         address indexed seller,
         address buyer
     );
 
+    event ListEvent(
+        uint256 when,
+        uint256 indexed nftID,
+        address indexed seller,
+        uint256 purchasePrice,
+        uint256 escrowAmount
+    );
+
     ////////////////////////////////////////
     // Constructor
-    constructor(
-        address _nftAddress,
-        uint256 _nftID,
-        uint256 _purchasePrice,
-        uint256 _escrowAmount,
-        address payable _seller,
-        address payable _buyer,
-        address _inspector,
-        address _lender
-    ) {
-        nftAddress = _nftAddress;
-        nftID = _nftID;
-        purchasePrice = _purchasePrice;
-        escrowAmount = _escrowAmount;
-        seller = _seller;
-        buyer = _buyer;
-        inspector = _inspector;
-        lender = _lender;
+    constructor(address _realEstateNFTAddress) {
+        realEstateNFTAddress = _realEstateNFTAddress
     }
 
     ////////////////////////////////////////
     // Methods
-
-    // buyer deposits the earnest to the escrow
-    function depositEarnest() public payable onlyBuyer("Only buyer can deposit earnest") {
-        if (msg.value < escrowAmount) {
-            revert EarnestDepositError("Insuficient funds provided", escrowAmount, msg.value);
-        }
-        emit DepositedEarnestEvent(block.timestamp, nftAddress, nftID, msg.sender, msg.value);
-    }
-
-    // inspector updates the inspection status
-    function updateInspectionStatus(
-        bool _inspectionPassed
-    ) public onlyInspector("Only inspector can update inspection status") {
-        inspectionPassed = _inspectionPassed;
-        emit InspectionEvent(block.timestamp, nftAddress, nftID, inspector, inspectionPassed);
-    }
 
     // get the balance of the contract
     function getBalance() public view returns (uint256) {
         return address(this).balance;
     }
 
-    // approve the sale
-    function approveSale() public {
-        approval[msg.sender] = true;
-        emit ApprovedSaleByEvent(block.timestamp, nftAddress, nftID, msg.sender);
+    ////////
+    // SELLER things
+
+    // list nft to be sold
+    function list(uint256 _nftID, uint256 _purchasePrice, uint256 _escrowAmount) public payable {
+        IERC721(realEstateNFTAddress).transferFrom(msg.sender, address(this), _nftID);
+        isListed[_nftID] = true;
+        purchasePrice[_nftID] = _purchasePrice;
+        escrowAmount[_nftID] = _escrowAmount;
+        seller[_nftID] = msg.sender;
+        inspectionPassed[_nftID] = false;
+        emit ListEvent(block.timestamp, _nftID, msg.sender, _purchasePrice, _escrowAmount);
     }
 
-    function cancelSale() public {
+    ////////
+    // BUYER things
+
+    // buyer is assigned to the NFT
+    function meToBuyer(uint256 _nftID) public mustBeListed(_nftID) {
+        if (buyer[_nftID] != address(0)) {
+            revert NotDesiredEntityError("NFT already has a buyer", buyer[_nftID], msg.sender);
+        }
+        buyer[_nftID] = msg.sender;
+    }
+
+    // buyer deposits the earnest to the escrow
+    function depositEarnest(
+        uint256 _nftID
+    ) public payable mustBeListed(_nftID) onlyBuyer(_nftID, "Only buyer can deposit earnest") {
+        if (msg.value < escrowAmount[_nftID]) {
+            revert EarnestDepositError("Insuficient funds provided", escrowAmount, msg.value);
+        }
+        emit DepositedEarnestEvent(block.timestamp, _nftID, msg.sender, msg.value);
+    }
+
+    ////////
+    // INSPECTOR things
+
+    // inspector is assigned to the NFT
+    function meToInspector(uint256 _nftID) public mustBeListed(_nftID) {
+        if (inspector[_nftID] != address(0)) {
+            revert NotDesiredEntityError("NFT already has an inspector", inspector[_nftID], msg.sender);
+        }
+        inspector[_nftID] = msg.sender;
+    }
+
+    // inspector updates the inspection status
+    function updateInspectionStatus(
+        uint256 _nftID,
+        bool _inspectionPassed
+    ) public mustBeListed(_nftID) onlyInspector(_nftID, "Only inspector can update inspection status") {
+        inspectionPassed[_nftID] = _inspectionPassed;
+        emit InspectionEvent(block.timestamp, _nftID, inspector, inspectionPassed);
+    }
+
+    ////////
+    // ALL parties things
+
+    // approve the sale
+    function approveSale(uint256 _nftID) public mustBeListed(_nftID) {
+        approval[msg.sender] = true;
+        emit ApprovedSaleByEvent(block.timestamp, _nftID, msg.sender);
+    }
+
+    function cancelSale(uint256 _nftID) public mustBeListed(_nftID) {
         if (inspectionPassed) payable(seller).transfer(address(this).balance);
         else payable(buyer).transfer(address(this).balance);
     }
 
     // transfer ownership of the NFT to the buyer
-    function transactionSale() public {
+    function transactionSale(uint256 _nftID) public mustBeListed(_nftID) {
         if (!inspectionPassed) {
             revert SaleError("Inspection not passed yet");
         }
@@ -155,7 +203,7 @@ contract Escrow {
         if (!success) {
             revert SaleError("Failed to transfer funds to the seller");
         }
-        IERC721(nftAddress).transferFrom(seller, buyer, nftID);
-        emit SaleEvent(block.timestamp, nftAddress, nftID, seller, buyer);
+        IERC721(nftAddress).transferFrom(address(this), buyer, nftID);
+        emit SaleEvent(block.timestamp, _nftID, seller, buyer);
     }
 }
