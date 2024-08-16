@@ -26,7 +26,7 @@ describe('RealEstate', () => {
     //
     let NFT: { id: number; address: string } = {
         id: -1,
-        address: '',
+        contractAddress: '',
     }
 
     // initialize variables before each test
@@ -54,11 +54,11 @@ describe('RealEstate', () => {
         if (transferEventParsedLog) NFT.id = Number(transferEventParsedLog.args.tokenId)
         else throw new Error('Transfer event not found')
 
-        NFT.address = await realEstate.getAddress()
+        NFT.contractAddress = await realEstate.getAddress()
 
         // Escrow
         escrow = await Escrow.deploy(
-            NFT.address,
+            NFT.contractAddress,
             NFT.id,
             seller.address,
             buyer.address,
@@ -77,7 +77,7 @@ describe('RealEstate', () => {
     })
 
     describe('Deployment', async () => {
-        it('Should send NFT to the seller / deployer / owner', async () => {
+        it('Should verify the NFT owner (seller)', async () => {
             expect(await realEstate.ownerOf(NFT.id)).to.equal(seller.address)
         })
     })
