@@ -49,3 +49,13 @@ npx hardhat node
 ```
 
 Copy [`./artifacts/contracts/RealEstate.sol/RealEstate.json`](./artifacts/contracts/RealEstate.sol/RealEstate.json) abi list to [`client/src/utils/RealEstate_ABI.json`](../client/src/utils/RealEstate_ABI.json)
+
+### Deploy on Local
+
+While running local node run
+
+```shell
+npx hardhat run scripts/deploy.ts --network localhost
+```
+
+Copy Escrow contract address that appears on console to [`client/src/utils/constants.ts`](../client/src/utils/constants.json)
