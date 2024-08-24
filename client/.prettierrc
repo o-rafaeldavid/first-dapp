@@ -1,0 +1,25 @@
+{
+    "printWidth": 80,
+    "tabWidth": 4,
+    "semi": true,
+    "singleQuote": false,
+    "endOfLine": "lf",
+    "overrides": [
+        {
+            "files": ["*js", "*jsx", "*.ts", "*.tsx", "*.mjs"],
+            "options": {
+                "semi": false,
+                "singleQuote": true,
+                "jsxSingleQuote": true,
+                "arrowParens": "avoid",
+                "trailingComma": "none"
+            }
+        },
+        {
+            "files": ["*.eslintrc", "*.prettierrc", "*.babelrc", "*.json"],
+            "options": {
+                "trailingComma": "none"
+            }
+        }
+    ]
+}
