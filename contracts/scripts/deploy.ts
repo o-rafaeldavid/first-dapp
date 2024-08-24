@@ -39,14 +39,14 @@ async function main() {
 
     // Deploy Escrow Contract
     console.log(`Deploying Escrow Contract...`)
-    const Escrow = await ethers.getContractFactory('Escrow')
-    const escrow = await Escrow.deploy(realEstateAddress)
-    const escrowAddress = await escrow.getAddress()
 
     console.log(`Deployed Escrow Contract at: ${escrowAddress}`)
     console.log(`Listing 3 properties...\n`)
 
     for (let i = 0; i < 3; i++) {
+        const Escrow = await ethers.getContractFactory('Escrow')
+        const escrow = await Escrow.deploy(realEstateAddress)
+        const escrowAddress = await escrow.getAddress()
         let transaction = await realEstate.connect(seller).approve(escrowAddress, i)
         await transaction.wait()
     }
