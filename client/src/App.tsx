@@ -1,6 +1,7 @@
 import { createWeb3Modal, defaultConfig } from '@web3modal/ethers/react'
 import ConnectWallet from './components/ConnectWallet'
 import { Chain, Metadata } from '@web3modal/scaffold-utils/ethers'
+import EscrowTestingComponent from './components/EscrowTestingComponent'
 
 // 1. Get projectId
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID
@@ -44,7 +45,12 @@ createWeb3Modal({
 })
 
 const App = () => {
-    return <ConnectWallet />
+    return (
+        <>
+            <ConnectWallet />
+            <EscrowTestingComponent />
+        </>
+    )
 }
 
 export default App
