@@ -2,9 +2,9 @@ import {
     useWeb3ModalProvider,
     useWeb3ModalAccount
 } from '@web3modal/ethers/react'
-import { BrowserProvider, Contract, formatUnits } from 'ethers'
+import { BrowserProvider, formatUnits } from 'ethers'
 import { ESCROW_CONTRACT_ADDRESS } from '../../utils/constants'
-import escrow_abi from '../../utils/abis/Escrow_ABI.json'
+import { Escrow_ABI__factory } from '../../typescript/contracts'
 
 const EscrowTestingComponent = () => {
     const { isConnected } = useWeb3ModalAccount()
@@ -17,9 +17,8 @@ const EscrowTestingComponent = () => {
         const ethersProvider = new BrowserProvider(walletProvider)
         const signer = await ethersProvider.getSigner()
         // The Contract object
-        const EscrowContract = new Contract(
+        const EscrowContract = Escrow_ABI__factory.connect(
             ESCROW_CONTRACT_ADDRESS,
-            escrow_abi,
             signer
         )
         const EscrowBalance = await EscrowContract.getBalance()
