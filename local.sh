@@ -41,14 +41,14 @@ deploy_contracts () {
     npx hardhat run scripts/deploy.ts --network localhost | tee $ROOT_DIR/deploy.log
 }
 
-# Função para capturar os endereços dos contratos e atualizar constants.ts
+# Função para capturar os endereços dos contratos e atualizar addrs.ts
 update_contract_addresses () {
-    echo "Atualizando endereços dos contratos no arquivo constants.ts..."
+    echo "Atualizando endereços dos contratos no arquivo addrs.ts..."
     REAL_ESTATE_ADDRESS=$(grep -Po '(?<=Deployed Real Estate Contract at: ).*' $ROOT_DIR/deploy.log)
     ESCROW_ADDRESS=$(grep -Po '(?<=Deployed Escrow Contract at: ).*' $ROOT_DIR/deploy.log)
     
-    sed -i.bak "s|export const REALESTATE_CONTRACT_ADDRESS = .*|export const REALESTATE_CONTRACT_ADDRESS = '$REAL_ESTATE_ADDRESS';|" $ROOT_DIR/client/src/utils/constants.ts
-    sed -i.bak "s|export const ESCROW_CONTRACT_ADDRESS = .*|export const ESCROW_CONTRACT_ADDRESS = '$ESCROW_ADDRESS';|" $ROOT_DIR/client/src/utils/constants.ts
+    sed -i.bak "s|export const REALESTATE_CONTRACT_ADDRESS = .*|export const REALESTATE_CONTRACT_ADDRESS = '$REAL_ESTATE_ADDRESS';|" $ROOT_DIR/client/src/utils/contracts/addrs.ts
+    sed -i.bak "s|export const ESCROW_CONTRACT_ADDRESS = .*|export const ESCROW_CONTRACT_ADDRESS = '$ESCROW_ADDRESS';|" $ROOT_DIR/client/src/utils/contracts/addrs.ts
 
     echo "Endereços atualizados."
 }
@@ -58,7 +58,7 @@ copy_abis () {
     echo "Copiando ABIs para o cliente..."
 
     # Cria o diretório de destino, se não existir
-    mkdir -p $ROOT_DIR/client/src/utils/abis
+    mkdir -p $ROOT_DIR/client/src/utils/contracts/abis
 
     # Encontra todos os arquivos .json, excluindo os .dbg.json
     find $ROOT_DIR/contracts/artifacts/contracts -name '*.json' ! -name '*.dbg.json' | while read file; do
@@ -66,7 +66,7 @@ copy_abis () {
         filename=$(basename "$file" .json)
         
         # Extrai apenas o parâmetro "abi" e salva no novo arquivo
-        jq '.abi' "$file" > "$ROOT_DIR/client/src/utils/abis/${filename}_ABI.json"
+        jq '.abi' "$file" > "$ROOT_DIR/client/src/utils/contracts/abis/${filename}_ABI.json"
     done
 
     echo "ABIs copiadas e renomeadas."

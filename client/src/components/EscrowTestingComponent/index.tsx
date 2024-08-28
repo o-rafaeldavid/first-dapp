@@ -5,7 +5,8 @@ import {
 import { BrowserProvider, formatUnits } from 'ethers'
 
 import { Escrow_ABI__factory } from '../../typescript/contracts'
-import { ESCROW_CONTRACT_ADDRESS } from '../../utils/constants'
+import { Console } from '../../utils/console'
+import { ESCROW_CONTRACT_ADDRESS } from '../../utils/contracts/addrs'
 
 const EscrowTestingComponent = () => {
     const { isConnected } = useWeb3ModalAccount()
@@ -24,7 +25,7 @@ const EscrowTestingComponent = () => {
         )
         const EscrowBalance = await EscrowContract.getBalance()
 
-        console.log(formatUnits(EscrowBalance, 18))
+        Console.log!(formatUnits(EscrowBalance, 18))
     }
 
     return <button onClick={getBalance}>Get Escrow Contract Balance</button>
