@@ -44,11 +44,28 @@ deploy_contracts () {
 # Função para capturar os endereços dos contratos e atualizar addrs.ts
 update_contract_addresses () {
     echo "Atualizando endereços dos contratos no arquivo addrs.ts..."
+    
+    # Captura os endereços dos contratos
     REAL_ESTATE_ADDRESS=$(grep -Po '(?<=Deployed Real Estate Contract at: ).*' $ROOT_DIR/deploy.log)
     ESCROW_ADDRESS=$(grep -Po '(?<=Deployed Escrow Contract at: ).*' $ROOT_DIR/deploy.log)
     
-    sed -i.bak "s|export const REALESTATE_CONTRACT_ADDRESS = .*|export const REALESTATE_CONTRACT_ADDRESS = '$REAL_ESTATE_ADDRESS';|" $ROOT_DIR/client/src/utils/contracts/addrs.ts
-    sed -i.bak "s|export const ESCROW_CONTRACT_ADDRESS = .*|export const ESCROW_CONTRACT_ADDRESS = '$ESCROW_ADDRESS';|" $ROOT_DIR/client/src/utils/contracts/addrs.ts
+    # Verifica se os endereços foram encontrados
+    if [[ -z "$REAL_ESTATE_ADDRESS" || -z "$ESCROW_ADDRESS" ]]; then
+        echo "Erro: Não foi possível encontrar os endereços dos contratos no deploy.log."
+        exit 1
+    fi
+
+    # Verifica se o arquivo addrs.ts existe, se não, cria-o
+    if [ ! -f $ROOT_DIR/client/src/utils/contracts/addrs.ts ]; then
+        echo "Arquivo addrs.ts não encontrado, criando novo arquivo..."
+        touch $ROOT_DIR/client/src/utils/contracts/addrs.ts
+        echo "export const REALESTATE_CONTRACT_ADDRESS = '';" > $ROOT_DIR/client/src/utils/contracts/addrs.ts
+        echo "export const ESCROW_CONTRACT_ADDRESS = '';" >> $ROOT_DIR/client/src/utils/contracts/addrs.ts
+    fi
+
+    # Atualiza os endereços no arquivo addrs.ts
+    sed -i "s|export const REALESTATE_CONTRACT_ADDRESS = .*|export const REALESTATE_CONTRACT_ADDRESS = '$REAL_ESTATE_ADDRESS';|" $ROOT_DIR/client/src/utils/contracts/addrs.ts
+    sed -i "s|export const ESCROW_CONTRACT_ADDRESS = .*|export const ESCROW_CONTRACT_ADDRESS = '$ESCROW_ADDRESS';|" $ROOT_DIR/client/src/utils/contracts/addrs.ts
 
     echo "Endereços atualizados."
 }
@@ -82,6 +99,10 @@ generate_typescript_types () {
 
 # Função para iniciar o cliente
 start_client () {
+    echo "Executando lint com correções automáticas..."
+    cd $ROOT_DIR/client
+    bun run lint --fix
+    
     echo "Iniciando o cliente..."
     cd $ROOT_DIR/client
     bun run dev &
