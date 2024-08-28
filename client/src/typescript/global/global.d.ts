@@ -1,4 +1,4 @@
-import { EthereumProvider } from '@metamask/providers'
+import type { EthereumProvider } from '@metamask/providers'
 
 declare global {
     interface Window {

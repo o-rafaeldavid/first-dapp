@@ -1,6 +1,8 @@
 import { createWeb3Modal, defaultConfig } from '@web3modal/ethers/react'
+
+import type { Chain, Metadata } from '@web3modal/scaffold-utils/ethers'
+
 import ConnectWallet from './components/ConnectWallet'
-import { Chain, Metadata } from '@web3modal/scaffold-utils/ethers'
 import EscrowTestingComponent from './components/EscrowTestingComponent'
 
 // 1. Get projectId

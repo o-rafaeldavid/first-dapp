@@ -3,8 +3,9 @@ import {
     useWeb3ModalAccount
 } from '@web3modal/ethers/react'
 import { BrowserProvider, formatUnits } from 'ethers'
-import { ESCROW_CONTRACT_ADDRESS } from '../../utils/constants'
+
 import { Escrow_ABI__factory } from '../../typescript/contracts'
+import { ESCROW_CONTRACT_ADDRESS } from '../../utils/constants'
 
 const EscrowTestingComponent = () => {
     const { isConnected } = useWeb3ModalAccount()
